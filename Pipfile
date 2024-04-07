@@ -17,7 +17,9 @@ seaborn = "*"
 tqdm = "*"
 cython = "*"
 scipy = "*"
+kaleido = "*"
 
 [dev-packages]
+ipykernel = "*"
 
 [scripts]

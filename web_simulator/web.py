@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import matplotlib.pyplot as plt
+from matplotlib import collections as mc
 
 
 class Point3D:
@@ -97,25 +99,26 @@ class Web:
         df = self.to_df()
         fig = px.line_3d(df, x='x', y='y', z='z')
         fig.update_traces(connectgaps=False)
+        fig.update_layout(xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
         fig.show()
 
-    def thick_plane_section(self, center: float, width: float) -> Web:
-        """Sample more realistic section, which has width.
-        For given `center` and `width`, the thick plane is a region
-        whose x-coordinate lies between `center - width/2` and `center + width/2`.
+    def thick_plane_section(self, center: float, thickness: float) -> Web:
+        """Sample more realistic section, which has thickness.
+        For given `center` and `thickness`, the thick plane is a region
+        whose x-coordinate lies between `center - thickness/2` and `center + thickness/2`.
 
         Args:
             points (List[Point3D]): Vertices of spider web graph.
             edges (List[Tuple[int, int]]): Edges of spider web graph.
             center (float): Coordinate of the center of the section.
-            width (float): Width of section.
+            thickness (float): thickness of section.
 
         Returns:
             Line segments that are contained in both web and the thick section.
             Tuple of list of vertices and edges.
         """
-        smin = center - width / 2
-        smax = center + width / 2
+        smin = center - thickness / 2
+        smax = center + thickness / 2
 
         # auxiliary functions
         def check_intersect(p1: Point3D, p2: Point3D, x_coord: float) -> bool:
@@ -193,18 +196,22 @@ class Web:
 
         return Web(new_vertices, new_edges)
 
-    def plot_thick_plane_section(self, center: float, width: float) -> None:
+    def plot_thick_plane_section(self, center: float, thickness: float, width: int = 1920, height: int = 1080) -> None:
         """Plot yz-plane projection of a thick plane section.
 
         Args:
             center (float): Coordinate of the center of the section.
-            width (float): Width of section.
+            thickness (float): Width of section.
         """
         # TODO: add Gaussian blur that reflects laser's brightness
-        thick_section = self.thick_plane_section(center, width)
+        thick_section = self.thick_plane_section(center, thickness)
         sec_df = thick_section.to_df()[["y", "z"]]
         fig = px.line(sec_df, x="y", y="z")
         fig.update_traces(connectgaps=False)
+        fig.update_layout(
+            xaxis=dict(range=[-width / 2, width / 2], showgrid=False),
+            yaxis=dict(range=[0, height], showgrid=False),
+        )
         fig.show()
 
     def save(self, path: str) -> None:
@@ -249,3 +256,60 @@ class Web:
         edges = [(e[0], e[1]) for e in edges]
 
         return Web(vertices, edges)
+
+    def simulate_frames(self, img_w: int = 1920, img_h: int = 1080, depth: int = 1920, num_frames: int = 100, frame_thickness: float = 10.0, save_dir: Optional[str] = None) -> np.ndarray:
+        """Generate synthetic frame images of the web.
+        
+        Args:
+            img_w (int, optional): image width. Defaults to 1920.
+            img_h (int, optional): image height. Defaults to 1080.
+            num_frames (int, optional): number of frames. Defaults to 100.
+            frame_thickness (float, optional): width of a single thick section. Defaults to 0.1.
+
+        Returns:    
+            np.ndarray: 3D numpy array of shape (num_frames, img_h, img_w), consist of black/white pixel values.
+        """
+        # plt.ioff()
+        y_start = -depth / 2
+        y_end = depth / 2
+        save_dir = Path(save_dir)
+        save_dir.mkdir(exist_ok=True)
+        for i in range(num_frames):
+            y_i = y_start + (i / (num_frames - 1)) * (y_end - y_start)
+            section_i = self.thick_plane_section(center=y_i, thickness=frame_thickness)
+            sec_df = section_i.to_df()[["y", "z"]]
+
+            # make plot
+            lines = []
+            num_lines = len(sec_df.index) // 3
+            for j in range(num_lines):
+                line_j_1 = sec_df.iloc[3 * j].values.flatten().tolist()
+                line_j_2 = sec_df.iloc[3 * j + 1].values.flatten().tolist()
+                lines.append([line_j_1, line_j_2])
+
+            lc = mc.LineCollection(lines, linewidths=1.0, colors='1')
+            px = 1/plt.rcParams['figure.dpi']  # pixel in inches
+            fig, ax = plt.subplots(figsize=(img_w * px, img_h * px), frameon=False)
+            # ax = fig.add_axes(frameon=False)
+            ax.add_collection(lc)
+            ax.set_xlim([-img_w / 2, img_w / 2])
+            ax.set_ylim([0, img_h])
+            ax.set_aspect('equal')
+            ax.set_facecolor('0')
+            _ = [s.set_visible(False) for s in ax.spines.values()]
+            ax.margins(0.0)
+
+            fig.patch.set_facecolor('0')
+            fig.add_axes(ax)
+            fig.subplots_adjust(
+                top=1.0,
+                bottom=0.0,
+                left=0.0,
+                right=1.0,
+                hspace=0.0,
+                wspace=0.0,
+            )  # remove all the margins outside frame
+
+            # save
+            path_i = save_dir / f"{i}.png"
+            fig.savefig(path_i)

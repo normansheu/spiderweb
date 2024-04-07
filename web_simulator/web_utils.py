@@ -3,7 +3,7 @@ import random
 from typing import Callable, Union
 import numpy as np
 
-from .web import Point3D, VERTICES_T, EDGES_T, Web
+from web import Point3D, VERTICES_T, EDGES_T, Web
 
 
 def sample_segment(p1: Point3D, p2: Point3D, threshold_min: float = 1.0, threshold_max: Union[float, np.infty] = np.infty):
@@ -15,15 +15,31 @@ def sample_segment(p1: Point3D, p2: Point3D, threshold_min: float = 1.0, thresho
     else:
         # probability is inversely proportional to the distance
         # may change this function if needed
-        prob = threshold_min / (d ** 2)
+        # alpha = 2
+        beta = np.log(threshold_max / threshold_min) / np.log(100.0)
+        alpha = threshold_min ** beta
+        prob = alpha / (d ** beta)
         return random.random() < prob
 
 
-def sample_vertices(func: Callable, R: float = 1.0, N: int = 1000, epsilon: float = 0.01) -> VERTICES_T:
-    # func: 2-variable function
-    xy_coords = np.random.uniform(-R, R, size=(N, 2))
-    z_coords = np.array([func(xy[0], xy[1]) + np.random.uniform(-epsilon, epsilon) for xy in xy_coords])
-    vertices = [Point3D(xy[0], xy[1], z) for xy, z in zip(xy_coords, z_coords)]
+def sample_vertices(func: Callable, x_len: float, y_len: float, N: int = 1000, epsilon: float = 10.0) -> VERTICES_T:
+    """Sample vertices on a graph of a given function with random noise.
+
+    Args:
+        func (Callable): 2-variable function whose graph would simulate web.
+        x_len (float): width of floor.
+        y_len (float): height of floor.
+        N (int, optional): Number of points to be sampled. Defaults to 1000.
+        epsilon (float, optional): Error bound for noise. Defaults to 10.0.
+
+    Returns:
+        VERTICES_T: _description_
+    """
+    x_coords = np.random.uniform(-x_len / 2, x_len / 2, size=N)
+    y_coords = np.random.uniform(-y_len / 2, y_len / 2, size=N)
+    z_coords = func(x_coords, y_coords) + np.random.uniform(-epsilon, epsilon)
+
+    vertices = [Point3D(x_, y_, z_) for x_, y_, z_ in zip(x_coords, y_coords, z_coords)]
     return vertices
 
 
@@ -39,12 +55,13 @@ def sample_edges(vertices: VERTICES_T, threshold_min: float = 1.0, threshold_max
 
 def sample_web(
     func: Callable,
-    R: float = 1.0,
+    x_len: float,
+    y_len: float,
     N: int = 1000,
     epsilon: float = 0.01,
     threshold_min: float = 1.0,
     threshold_max: Union[float, np.infty] = np.infty,
 ) -> Web:
-    vertices = sample_vertices(func, R, N, epsilon)
+    vertices = sample_vertices(func, x_len, y_len, N, epsilon)
     edges = sample_edges(vertices, threshold_min, threshold_max)
     return Web(vertices, edges)
