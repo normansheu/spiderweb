@@ -19,6 +19,8 @@ cython = "*"
 scipy = "*"
 kaleido = "*"
 tensorflow = "*"
+ipywidgets = "*"
+sleap = "*"
 
 [dev-packages]
 ipykernel = "*"
