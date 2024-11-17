@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 
-from utils import load_pcd, calculate_density
+from utils import load_pcd_array, calculate_density
 
 
 def p_average(density, p=1):
@@ -20,8 +20,9 @@ def p_average(density, p=1):
 
     if p > 0:
         density_p = np.power(density, p)
-        print(density_p.shape, kernel.shape)
-        inferred_density = scipy.signal.convolve(density_p, kernel, mode="same") ** (1/p)  # Same shape as input
+        inferred_density = scipy.signal.convolve(density_p, kernel, mode="same")  # Same shape as input
+        inferred_density = np.clip(inferred_density, 0, None)  # Ensure inferred density is non-negative
+        inferred_density = inferred_density ** (1/p)
     else:
         # Geometry mean when p = 0, exp(avg(log(density)))
         eps = 1e-6  # Small value to avoid log(0)
@@ -39,7 +40,7 @@ def p_harmonicity(density, p=1, q=1):
     return np.mean(err ** q) ** (1/q)
 
 
-def plot_error_vs_p(density, q=1, delta=0.1, max_p=3.0):
+def plot_error_vs_p(density, q=1, delta=0.01, max_p=3.0):
     p_range = [delta * i for i in range(0, int(max_p / delta) + 1)]
     errors = [p_harmonicity(density, p, q) for p in p_range]
     best_p = p_range[np.argmin(errors)]
@@ -51,9 +52,18 @@ def plot_error_vs_p(density, q=1, delta=0.1, max_p=3.0):
     plt.show()
 
 
-def visualize_inferred_vs_actual(actual_density, inferred_density, slice_idx=66):
+def find_brightest_slice(density):
+    # Find the brightest slice (highest density) in the density volume
+    brightest_slice_idx = np.argmax(np.sum(density, axis=(1, 2)))
+    return brightest_slice_idx
+
+
+def visualize_inferred_vs_actual(actual_density, inferred_density, slice_idx=None):
     # Compare a slice of actual and inferred densities
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    if slice_idx is None:
+        slice_idx = find_brightest_slice(actual_density)
     
     # Plot actual densities for a specific slice
     axes[0].imshow(actual_density[slice_idx, :, :], cmap='Greys', interpolation='nearest')
@@ -72,23 +82,26 @@ def visualize_inferred_vs_actual(actual_density, inferred_density, slice_idx=66)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Infer density from neighboring blocks.")
     parser.add_argument("--file_name", type=str, help="File name of the pcd file of a web (without extension).")
-    parser.add_argument("--num", type=int, default=20, help="Number of subdivisions for density calculation. Default is 20.")
+    parser.add_argument("--num_M", type=int, default=20, help="Number of subdivisions for density calculation. Default is 20.")
     parser.add_argument("--p", type=float, default=1.0, help="Power for p-power mean. Default is 1.0.")
     parser.add_argument("--q", type=float, default=1.0, help="Power for L^q norm. Default is 1.0.")
     parser.add_argument("--visualize", action="store_true", help="Visualize the inferred density vs original density.")
     parser.add_argument("--plot_p", action="store_true", help="Plot error vs p. Also find the best p.")
     args = parser.parse_args()
 
-    path = f"../point_clouds/{args.file_name}.pcd"
-    num = args.num
+    path = f"../point_clouds/{args.file_name}.npy"
+    num_M = args.num_M
     p = args.p
     q = args.q
 
-    points = load_pcd(path)
-    density = calculate_density(points, num_subdivisions=num)
+    points = load_pcd_array(path)
+    density = calculate_density(points, M=num_M)
     inferred_density = p_average(density, p)
+    q_harmonicity = p_harmonicity(density, p, q)
+    print(f"L^{q} error: {q_harmonicity:.4f}")
 
     if args.visualize:
-        visualize_inferred_vs_actual(density, inferred_density)
+        slice_idx = num_M // 2 
+        visualize_inferred_vs_actual(density, inferred_density, slice_idx=slice_idx)
     if args.plot_p:
-        plot_error_vs_p(density, q=q)
+        plot_error_vs_p(density, q=q, delta=1.0, max_p=200.0)

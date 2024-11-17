@@ -87,22 +87,5 @@ if __name__ == "__main__":
     distribution_levels = record_distribution(density_levels)
     entropy = compute_entropy(distribution_levels, exclude_zero=True)
     print(f"Entropy without 0: {entropy}")
-    # entropy_with_0, entropy_without_0, avg_entropy_without_0 = calculate_entropies_for_subdivisions(pcd, num_levels=num_levels, min_M=min_M, max_M=max_M)
-    # print(f"Entropy with 0: {entropy_with_0}")
-    # print(f"Entropy without 0: {entropy_without_0}")
-    # print(f"Average entropy without 0: {avg_entropy_without_0}")
 
     plot_entropies_vs_subdivisions(pcd, num_levels=num_levels, min_M=min_M, max_M=max_M)
-
-    # # Plot entropy vs number of subdivisions
-    # subdivisions = range(min_M, max_M + 1)
-
-    # plt.figure()
-    # plt.plot(subdivisions, entropy_with_0, label='Including Level 0')
-    # plt.plot(subdivisions, entropy_without_0, label='Excluding Level 0')
-    # plt.plot(subdivisions, avg_entropy_without_0, label='Average excluding Level 0')
-    # plt.xlabel("Number of Subdivisions (M)")
-    # plt.ylabel("Entropy")
-    # plt.legend()
-    # plt.title("Entropy vs Number of Subdivisions")
-    # plt.show()
