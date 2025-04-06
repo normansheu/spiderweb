@@ -57,13 +57,13 @@ def visualize_density_with_labels(density_grid, output_image_path):
     mask = densities > 0
     x, y, z, densities = x[mask], y[mask], z[mask], densities[mask]
     
-    # Normalize densities for color mapping
-    norm = Normalize(vmin=densities.min(), vmax=densities.max())
+    # Normalize densities for color mapping with fixed range
+    norm = Normalize(vmin=0, vmax=0.010)  # Set the range to [0, 0.050]
     
     # Plotting the density distribution in 3D
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
-    scatter = ax.scatter(x, y, z, c=densities, cmap='plasma_r', norm=norm, s=40)
+    scatter = ax.scatter(x, y, z, c=densities, cmap='rainbow', norm=norm, s=40)
     
     # Add axis labels without numbers
     ax.set_xlabel("X axis")
@@ -83,16 +83,15 @@ def visualize_density_with_labels(density_grid, output_image_path):
 def save_color_bar(density_grid, color_bar_path):
     print("Saving color bar...")
     
-    # Normalize densities for color mapping
-    densities = density_grid.flatten()
-    norm = Normalize(vmin=densities.min(), vmax=densities.max())
+    # Normalize densities for color mapping with fixed range
+    norm = Normalize(vmin=0, vmax=0.010)  # Set the range to [0, 0.050]
     
     # Create a figure for the color bar
     fig, ax = plt.subplots(figsize=(6, 1))
     fig.subplots_adjust(bottom=0.5)
 
     # Create a color bar
-    cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='plasma_r'), cax=ax, orientation='horizontal')
+    cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='rainbow'), cax=ax, orientation='horizontal')
     cbar.set_label('Silk Density (fraction of total points)')
 
     # Save the color bar
@@ -101,10 +100,11 @@ def save_color_bar(density_grid, color_bar_path):
     plt.close()
     print(f"Color bar saved to {color_bar_path}")
 
+
 # Main function to execute the steps and visualize density distribution
 if __name__ == "__main__":
     # Path to your point cloud file (PCD)
-    file_path = "video_processing/point_clouds/@058 255 2024-12-05 04-26-14.pcd"
+    file_path = "video_processing/point_clouds/@040 255 2024-11-14 05-34-00.pcd"
     
     # Step 1: Load the PCD file
     points = load_pcd(file_path)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     density_grid = calculate_density(count_grid, total_points)
     
     # Step 4: Visualize density distribution with labeled axes and save the plot
-    visualize_density_with_labels(density_grid, "@58_density.png")
+    visualize_density_with_labels(density_grid, "@40_density.png")
     
     # Step 5: Save the color bar
     save_color_bar(density_grid, "color_bar.png")

@@ -1,0 +1,47 @@
+{
+    "@027 255 2024-11-02 17-11-00.pcd": {
+        "species": "N. digna",
+        "sex": "Male",
+        "maturity": "Juvenile"
+    },
+    "@044 255 2024-11-19 03-16-53.pcd": {
+        "species": "M. dana",
+        "sex": "Male",
+        "maturity": "Juvenile"
+    },
+    "@038 255 2024-11-14 01-04-59.pcd": {
+        "species": "M. dana",
+        "sex": "Female",
+        "maturity": "Mature"
+    },
+    "@033 255 2024-11-09 18-48-38.pcd": {
+        "species": "M. dana",
+        "sex": "Female",
+        "maturity": "Mature"
+    },
+    "@055 255 2024-12-01 18-10-53.pcd": {
+        "species": "N. litigiosa",
+        "sex": "Female",
+        "maturity": "Mature"
+    },
+    "@034 255 2024-11-12 04-58-39.pcd": {
+        "species": "M. dana",
+        "sex": "Female",
+        "maturity": "Mature"
+    },
+    "@037 255 2024-11-14 00-23-35.pcd": {
+        "species": "N. litigiosa",
+        "sex": "Female",
+        "maturity": "Mature"
+    },
+    "@047 255 2024-11-25 20-44-12.pcd": {
+        "species": "M. dana",
+        "sex": "Male",
+        "maturity": "Juvenile"
+    },
+    "@030 255 2024-11-07 22-02-20.pcd": {
+        "species": "M. dana",
+        "sex": "Female",
+        "maturity": "Mature"
+    }
+}

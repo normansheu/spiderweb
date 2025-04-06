@@ -288,8 +288,8 @@ def normalize_pcd(pcd):
 
 
 if __name__ == '__main__':
-    distance_data = pd.read_csv("video_processing/distance_records/@064 255 distance data 2024-12-10 17-49-41.csv")
-    video_path = "video_processing/spider_videos/@064 255 2024-12-10 17-49-41.mp4"
+    distance_data = pd.read_csv("video_processing/distance_records/sparse3 255 distance data 2024-11-30 11-29-33.csv")
+    video_path = "video_processing/spider_videos/sparse3 255 2024-11-30 11-29-33.mp4"
     create_and_visualize_point_cloud(video_path=os.path.expanduser(video_path),
                                     dst_dir=os.path.expanduser("video_processing/point_clouds"), distance_data=distance_data,
                                     show_brightness=False,
