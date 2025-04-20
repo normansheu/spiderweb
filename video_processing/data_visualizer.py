@@ -72,7 +72,9 @@ def plot_and_save_graph(G, output_dir, sample_idx, y_data=None):
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"web_{sample_idx}.png")
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.show()
     plt.close()
+    
     print(f"Saved: {output_path}")
 
 def analyze_graph(G, sample_idx):
