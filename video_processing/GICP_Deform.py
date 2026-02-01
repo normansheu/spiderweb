@@ -4,6 +4,7 @@ import copy
 import time
 import itertools
 import os
+from pycpd import DeformableRegistration
 from tqdm import tqdm
 
 def get_distinct_colors(n):
@@ -251,6 +252,62 @@ def pyramid_registration(source, target, base_voxel_size=1.0):
 
     return result
 
+def o3d_to_np(pcd):
+    return np.asarray(pcd.points).astype(np.float64)
+
+def np_to_o3d(points, color=None):
+    p = o3d.geometry.PointCloud()
+    p.points = o3d.utility.Vector3dVector(points)
+    if color is not None:
+        p.paint_uniform_color(color)
+    return p
+
+
+def run_cpd_nonrigid_safe(source_pcd_aligned, target_pcd,
+                          alpha=25.0, beta=10.0,
+                          max_iter=50, tol=1e-5,
+                          voxel=10.0,  # <-- tune this
+                          sigma2_init=None,
+                          allow_cache=True):
+    """
+    Runs CPD on DOWNSAMPLED clouds to avoid O(N*M) memory blowup.
+    Returns: (TY_down, params, source_down, target_down)
+    """
+    # Downsample BOTH clouds
+    s_down = source_pcd_aligned.voxel_down_sample(voxel)
+    t_down = target_pcd.voxel_down_sample(voxel)
+
+    X = np.asarray(t_down.points, dtype=np.float64)  # target
+    Y = np.asarray(s_down.points, dtype=np.float64)  # source
+
+    # Optional: provide sigma2_init so pycpd doesn't build the giant diff tensor
+    # pycpd only builds that huge tensor when computing initialize_sigma2(X, Y)
+    # But even for downsampled clouds, it's fine. This is extra safety.
+    if sigma2_init is None:
+        # rough scale-based init: average squared distance to centroids
+        cx = X.mean(axis=0); cy = Y.mean(axis=0)
+        sigma2_init = float(np.mean(np.sum((X - cx)**2, axis=1)) + np.mean(np.sum((Y - cy)**2, axis=1))) / 6.0
+        sigma2_init = max(sigma2_init, 1e-6)
+
+    reg = DeformableRegistration(
+        X=X, Y=Y,
+        alpha=alpha,
+        beta=beta,
+        max_iterations=max_iter,
+        tolerance=tol,
+        sigma2=sigma2_init
+    )
+
+    TY, (G, W) = reg.register()
+    return TY, (G, W), s_down, t_down
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     print("1. Loading Point Clouds...")
     
@@ -278,7 +335,7 @@ if __name__ == "__main__":
         exit()
 
     # Base Voxel Size
-    BASE_VOXEL_SIZE = 3.0
+    BASE_VOXEL_SIZE = 10.0
     
     # Initialize Global Map with the first PCD
     print(f"\n2. Initializing Alignment Sequence with {len(pcds)} clouds...")
@@ -311,6 +368,23 @@ if __name__ == "__main__":
         
         # Transform the source
         source_pcd.transform(result.transformation)
+
+        # CPD stage (non-rigid) after rigid GICP alignment
+        TY, (G, W), s_down, t_down = run_cpd_nonrigid_safe(
+            source_pcd_aligned=source_pcd,
+            target_pcd=merged_map,
+            alpha=50.0,   # stiffer to avoid crazy warps on missing strands
+            beta=15.0,    # smoother
+            max_iter=40,
+            voxel=BASE_VOXEL_SIZE * 1.0  # start around your base voxel size
+        )
+
+        # Use the warped downsampled version just for visualization OR as a guide.
+        warped_down_pcd = copy.deepcopy(s_down)
+        warped_down_pcd.points = o3d.utility.Vector3dVector(TY)
+        
+        
+        
         source_pcd.paint_uniform_color(colors[i])
         
         # Add to visual list
@@ -318,7 +392,7 @@ if __name__ == "__main__":
         
         # Update the Merged Map (Target for next iteration)
         # We assume the map grows as we add pieces
-        merged_map += source_pcd
+        merged_map += warped_down_pcd
         
         # Optional: Downsample the map if it gets too huge to keep speed up
         # merged_map = merged_map.voxel_down_sample(BASE_VOXEL_SIZE * 0.5)
